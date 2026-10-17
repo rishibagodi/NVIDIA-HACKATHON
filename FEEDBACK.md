@@ -14,3 +14,9 @@
 - Thinking is on by default: 266 tokens for "Say hi in 5 words".
 - `chat_template_kwargs: {"enable_thinking": False}` cut this to 30 tokens (~9x).
 - A `/no_think` system message did NOT disable thinking. That's inconsistent with older Nemotron behavior, and the docs should say clearly which method applies.
+
+   ## 2026-10-18
+   - Nemotron 3 Ultra on build.nvidia.com returned HTTP 503 repeatedly during NemoClaw onboarding.
+   - Onboarding: pressing Enter on the messaging and policy-preset screens silently skips them. No confirmation like "nothing selected, continue?". I skipped Telegram and presets by accident.
+   - Agent defaulted to UTC for reminders; no timezone prompt during onboarding.
+   - Agent context is ~21k tokens after 2 messages (large built-in instructions), which matters for paid inference budgets.
