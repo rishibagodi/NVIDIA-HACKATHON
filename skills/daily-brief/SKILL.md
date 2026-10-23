@@ -4,7 +4,7 @@ description: Use when the user asks for a brief, "my day", "morning brief" or a 
 ---
 
 # Daily Brief
-1. Run exactly: `python3 {baseDir}/daily_brief.py`
-2. Reply with its output exactly as printed.
+1. Run exactly: `python3 {baseDir}/daily_brief.py 2>/dev/null`
+2. Reply with its standard output exactly as printed.
 3. Add one final line: "🎯 Do first: <most urgent item> — <one short reason>". If nothing is due, suggest one useful thing to get ahead on.
 4. No other text before or after.

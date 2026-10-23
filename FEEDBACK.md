@@ -85,3 +85,18 @@ Environment: Windows 11 + WSL2 (Ubuntu) + Docker Desktop, 7.6 GB RAM allocated t
 
 ## Summary of the design decision these issues led to
 LLM-driven scheduling produced silent delivery failures, duplicates, and disabled jobs. Vigil now uses **Nemotron for understanding** (reading notices and screenshots, extracting deadlines) and a **deterministic, idempotent sync script for scheduling**, which verifies the scheduler before the assistant confirms anything to the user.
+
+---
+
+## 2026-10-23
+
+### NemoClaw / OpenShell
+- `nemoclaw <n> connect` refused with "inference.local probe did not return a trusted result" while `doctor` was healthy and the agent replied normally on Telegram (false negative). Workaround: `openshell sandbox exec --name <n> -- <cmd>`.
+- Sandbox proxy rejects URLs containing a literal `%` in the query (wttr.in `format=%C,+%t`) with CONNECT 403 / curl exit 56, with no hint that the URL was the problem.
+- Gmail preset in read-only `[r]` mode still allows `smtp.gmail.com:465` (sending).
+- Weather preset allows `/usr/bin/python3*` but the sandbox Python is elsewhere, so Python HTTP calls were blocked while curl worked. Binary-scoped policy is a great control, but the mismatch is surprising.
+
+### OpenClaw
+- `openclaw cron disable` is refused for the system heartbeat job ("system-owned monitor jobs cannot be edited"); `openclaw system heartbeat disable` works (runs show "skipped: disabled", 258 ms vs. 28 s), but the job JSON still shows `enabled: true`.
+- **Per-job `--model` works well:** reminder and brief jobs run on Nemotron 3.5 Lightning 30B while the main agent stays on Super VL. Run history confirms the model per run. Excellent for cost-aware routing.
+- Smaller models copy stderr noise (`/bin/bash: cannot create /proc/self/oom_score_adj: Permission denied`) into replies verbatim; needed `2>/dev/null`. The harness could filter this sandbox-specific warning.

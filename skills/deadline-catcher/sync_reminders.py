@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Vigil: sync reminder automations with deadlines.md.
-Idempotent: creates missing reminders, repairs wrong/disabled ones, removes stale and duplicate ones, then verifies."""
+Idempotent: creates missing reminders, repairs wrong/disabled ones, removes stale and duplicate ones, then verifies.
+Reminders run on a small model (default: Nemotron 3.5 Lightning 30B) with thinking off."""
 import argparse, json, re, subprocess
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -13,6 +14,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--to", required=True, help="Telegram chat id to deliver reminders to")
 ap.add_argument("--file", default="/sandbox/.openclaw/workspace/deadlines.md")
 ap.add_argument("--dry-run", action="store_true")
+ap.add_argument("--model", default="inference/nvidia/nemotron-3.5-lightning-30b-a3b", help="small model for reminder jobs")
 args = ap.parse_args()
 
 def cron(*a):
@@ -75,7 +77,8 @@ for name, (at, text) in want.items():
     if job:
         d = job.get("delivery") or {}
         cur = datetime.fromisoformat(str((job.get("schedule") or {}).get("at", "1970-01-01T00:00:00+00:00")).replace("Z", "+00:00"))
-        if d.get("channel") == "telegram" and chat_id(job) == args.to and job.get("enabled", True) and abs((cur - at).total_seconds()) < 90:
+        if (d.get("channel") == "telegram" and chat_id(job) == args.to and job.get("enabled", True)
+                and abs((cur - at).total_seconds()) < 90 and (job.get("payload") or {}).get("model") == args.model):
             report["ok"].append(name); continue
         try:
             act("rm", job["id"])
@@ -84,7 +87,7 @@ for name, (at, text) in want.items():
     try:
         act("add", "--name", name, "--at", at.isoformat(), "--agent", "main",
             "--message", f"Reply with exactly this text and nothing else: {text}",
-            "--announce", "--channel", "telegram", "--to", args.to,
+            "--model", args.model, "--announce", "--channel", "telegram", "--to", args.to,
             "--session", "isolated", "--thinking", "off", "--light-context", "--delete-after-run")
         report["repaired" if job else "created"].append(f"{name} @ {at:%a %d %b %H:%M} IST")
     except Exception as e:
