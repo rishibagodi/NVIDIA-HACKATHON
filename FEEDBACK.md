@@ -100,3 +100,17 @@ LLM-driven scheduling produced silent delivery failures, duplicates, and disable
 - `openclaw cron disable` is refused for the system heartbeat job ("system-owned monitor jobs cannot be edited"); `openclaw system heartbeat disable` works (runs show "skipped: disabled", 258 ms vs. 28 s), but the job JSON still shows `enabled: true`.
 - **Per-job `--model` works well:** reminder and brief jobs run on Nemotron 3.5 Lightning 30B while the main agent stays on Super VL. Run history confirms the model per run. Excellent for cost-aware routing.
 - Smaller models copy stderr noise (`/bin/bash: cannot create /proc/self/oom_score_adj: Permission denied`) into replies verbatim; needed `2>/dev/null`. The harness could filter this sandbox-specific warning.
+
+- Token Factory: only Nemotron-3.5-Super-VL accepts image input; Nano 30B, 3.5 Lightning, Super 120B and Ultra 550B return a clear 400 "This model does not support image input". Clear error, good. Model ID naming is inconsistent (`Nemotron-3_5-Lightning` vs `Nemotron-3.5-Super-VL` vs `NVIDIA-Nemotron-3-Nano-30B-A3B`).
+
+---
+
+## 2026-10-24
+
+### OpenClaw + Nemotron (highest impact finding)
+- **Default `maxTokens` of 4096 breaks reasoning models.** Nemotron 3.5 Super VL reasons by default, and OpenClaw's `/think` offers only "off" for it (so the user can't lower reasoning), yet reasoning still consumes the output budget. Result across a week of testing: truncated replies, "The tool run finished, but no final summary was produced", and tool calls cut off with **nothing saved**. Raising `models.providers.inference.models[0].maxTokens` to 16384 via `openclaw config set` fixed every case. Suggestions: a higher default for reasoning models, and have thinking "off" send `chat_template_kwargs.enable_thinking=false` for Nemotron.
+- Asking the agent to rewrite a whole file (to keep it sorted) multiplies output tokens; moving sorting into a deterministic script removed the problem.
+
+### Other
+- `/think low` returns "not supported... Use one of: off" for Nemotron 3.5 Super VL, so there's no way to choose a middle reasoning level from chat.
+- Daily brief scheduled job fired exactly at 07:55 IST unattended; reminders at 16:00 and 21:59 (two in parallel) also delivered on time.

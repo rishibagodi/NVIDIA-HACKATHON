@@ -1,6 +1,6 @@
 ---
 name: daily-brief
-description: Use when the user asks for a brief, "my day", "morning brief" or a summary of upcoming deadlines with weather. Runs the daily brief script and adds one priority suggestion.
+description: ALWAYS use this skill when the user asks for a brief, briefing, "my day", "morning brief" or a summary of the day, including typos like "breif" or "brif". Runs the daily brief script and adds one priority suggestion.
 ---
 
 # Daily Brief

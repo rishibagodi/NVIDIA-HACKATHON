@@ -4,6 +4,9 @@ set -euo pipefail
 TO="$1"
 MODEL="${2:-inference/nvidia/nemotron-3.5-lightning-30b-a3b}"
 
+# Raise max output tokens (OpenClaw default 4096 truncates reasoning models like Nemotron 3.5)
+openclaw config set "models.providers.inference.models[0].maxTokens" 16384 --strict-json
+
 # Disable the 30-min heartbeat (saves ~1.2M tokens/day)
 openclaw system heartbeat disable
 

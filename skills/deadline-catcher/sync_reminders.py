@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Vigil: sync reminder automations with deadlines.md.
-Idempotent: creates missing reminders, repairs wrong/disabled ones, removes stale and duplicate ones, then verifies.
-Reminders run on a small model (default: Nemotron 3.5 Lightning 30B) with thinking off."""
+Sorts deadlines.md, then makes the scheduler match it: creates missing reminders, repairs wrong/disabled ones,
+removes stale and duplicate ones, and verifies. Reminders run on a small model with thinking off."""
 import argparse, json, re, subprocess
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -48,14 +48,23 @@ def rm(name, job, label):
     except Exception as e:
         report["failed"].append(f"{name}: rm {e}")
 
+# Sort deadlines.md deterministically (keeps any unparsed lines so nothing is lost)
+lines = [l.strip() for l in open(args.file, encoding="utf-8").read().splitlines()]
+entries = sorted((l for l in lines if LINE.match(l)), key=lambda l: LINE.match(l)[2])
+others = [l for l in lines if l and not LINE.match(l) and not l.startswith("#")]
+if not args.dry_run:
+    body = ["# Deadlines", *entries] + (["", "## Unparsed", *others] if others else [])
+    open(args.file, "w", encoding="utf-8").write("\n".join(body) + "\n")
+
 now = datetime.now(IST)
 want = {}
-for line in open(args.file, encoding="utf-8"):
-    m = LINE.match(line.strip())
-    if not m or m[1] != " ":
+for line in entries:
+    m = LINE.match(line)
+    if m[1] != " ":
         continue
     due = datetime.strptime(m[2], "%Y-%m-%d %H:%M").replace(tzinfo=IST)
     title, details, did = m[3], m[5].strip(), m[7]
+    details = "" if details == "-" else details
     for tag, (off, head) in OFFSETS.items():
         at = due - off
         if at > now + timedelta(minutes=1):
