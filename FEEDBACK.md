@@ -114,3 +114,23 @@ LLM-driven scheduling produced silent delivery failures, duplicates, and disable
 ### Other
 - `/think low` returns "not supported... Use one of: off" for Nemotron 3.5 Super VL, so there's no way to choose a middle reasoning level from chat.
 - Daily brief scheduled job fired exactly at 07:55 IST unattended; reminders at 16:00 and 21:59 (two in parallel) also delivered on time.
+
+---
+
+## 2026-10-24 / 25
+
+### Positives
+- PDF circulars worked with zero extra code: the OpenClaw PDF tool + Nemotron 3.5 Super VL extracted 4 deadlines and the sender from the signature.
+- Per-job `--model` + `NO_REPLY` + explicit Telegram delivery made scheduled jobs (daily brief, weekly review, Gmail scan) reliable and cheap.
+- Missed scheduled jobs **catch up** after a restart (the 07:55 brief ran at 11:29 when Docker came back).
+- Network policy is precise: the gmail preset allows only `/usr/bin/python3` to reach `imap.gmail.com:993`.
+
+### Friction
+- **Raw TCP clients can't reach allowed hosts without proxy code.** The sandbox has no direct DNS, so Python `imaplib` fails with "Temporary failure in name resolution" even though the gmail preset allows IMAP. I had to implement an HTTP CONNECT tunnel through `HTTPS_PROXY` myself. The Gmail docs don't mention this; a helper or a note would save hours.
+- `huggingface` preset allows `/usr/local/bin/python3`, but the sandbox Python is `/usr/bin/python3`, so model downloads from Python were blocked; I downloaded on the host and used `nemoclaw <n> upload`.
+- faster-whisper 1.2.1 + PyAV 19 incompatibility (`metadata_errors` removed), and no PyAV<15 wheel for Python 3.13, so I decoded audio directly with PyAV.
+- Gmail preset in read-only mode still allows SMTP sending.
+- Small model (Lightning 30B) confused past and upcoming items in summaries until the prompt stated it explicitly.
+
+### Ecosystem note
+- College Google Workspace accounts often disable 2-Step Verification, so App Passwords are unavailable; a keyword filter forwarding notices to a dedicated personal inbox worked well and limits what the agent can see.

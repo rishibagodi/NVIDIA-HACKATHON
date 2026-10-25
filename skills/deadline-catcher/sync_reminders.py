@@ -68,7 +68,10 @@ for line in entries:
     for tag, (off, head) in OFFSETS.items():
         at = due - off
         if at > now + timedelta(minutes=1):
-            want[f"dl-{did}-{tag}"] = (at, f"{head}: {title} — due {due:%a %d %b, %H:%M} IST. {details}".strip())
+            text = f"{head}: {title} — due {due:%a %d %b, %H:%M} IST. {details}".strip()
+            if tag == "2h":
+                text += f" Done already? Reply 'done {title}'."
+            want[f"dl-{did}-{tag}"] = (at, text)
 
 report = {"ok": [], "created": [], "repaired": [], "removed": [], "failed": []}
 existing = list_jobs()
@@ -87,7 +90,8 @@ for name, (at, text) in want.items():
         d = job.get("delivery") or {}
         cur = datetime.fromisoformat(str((job.get("schedule") or {}).get("at", "1970-01-01T00:00:00+00:00")).replace("Z", "+00:00"))
         if (d.get("channel") == "telegram" and chat_id(job) == args.to and job.get("enabled", True)
-                and abs((cur - at).total_seconds()) < 90 and (job.get("payload") or {}).get("model") == args.model):
+                and abs((cur - at).total_seconds()) < 90 and (job.get("payload") or {}).get("model") == args.model
+                and (job.get("payload") or {}).get("message") == f"Reply with exactly this text and nothing else: {text}"):
             report["ok"].append(name); continue
         try:
             act("rm", job["id"])

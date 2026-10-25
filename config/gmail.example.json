@@ -1,0 +1,5 @@
+{
+    "email": "your-personal-address@gmail.com",
+    "app_password": "<16-character Gmail App Password — create it inside the sandbox with read -s, never commit it>",
+    "filter": "(to:your-college-address OR from:your-college-domain)"
+}

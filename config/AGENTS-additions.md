@@ -6,3 +6,6 @@ Append these sections to `/sandbox/.openclaw/workspace/AGENTS.md` inside the san
 
 ## Brief (standing rule)
 - Any request for a brief, briefing, "my day" or today's plan, including typos like "breif", must use the daily-brief skill exactly.
+
+## Email (standing rule)
+- "check my email", "check mail", "any new notices" (including typos) must use the gmail-scan skill exactly.

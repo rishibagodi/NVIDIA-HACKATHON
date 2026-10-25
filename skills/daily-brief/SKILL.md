@@ -6,5 +6,5 @@ description: ALWAYS use this skill when the user asks for a brief, briefing, "my
 # Daily Brief
 1. Run exactly: `python3 {baseDir}/daily_brief.py 2>/dev/null`
 2. Reply with its standard output exactly as printed.
-3. Add one final line: "🎯 Do first: <most urgent item> — <one short reason>". If nothing is due, suggest one useful thing to get ahead on.
+3. Add one final line: "🎯 Do first: <action> — <one short reason>". Pick the most urgent item; if nothing is due today but a heavy day is listed, suggest starting one of that day's items early.
 4. No other text before or after.

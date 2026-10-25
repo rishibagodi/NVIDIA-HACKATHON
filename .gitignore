@@ -219,3 +219,11 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 deadlines.md
+
+deadlines.md
+gmail.json
+gmail_seen.json
+*.ogg
+*.oga
+models/
+vigil-backups/

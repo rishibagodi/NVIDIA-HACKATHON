@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Vigil daily brief: today's / tomorrow's / this week's deadlines + Bengaluru weather."""
+"""Vigil daily brief: today / tomorrow / this week, heavy-day warnings, Bengaluru weather."""
 import re, subprocess
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -23,15 +24,27 @@ try:
 except Exception:
     weather = "unavailable"
 
+week = [i for i in items if i[0].date() <= today + timedelta(7)]
+load = Counter(d.date() for d, _, _ in week)
+exams = Counter(d.date() for d, _, typ in week if typ == "exam")
+heavy = [day for day, n in sorted(load.items()) if n >= 3 or (n >= 2 and exams[day])]
+
+hour = now.hour
+greet = "☀️ Good morning" if hour < 12 else "🌤️ Good afternoon" if hour < 17 else "🌙 Good evening"
 sections = [
     ("📌 Today", [i for i in items if i[0].date() == today], False),
     ("⏭️ Tomorrow", [i for i in items if i[0].date() == today + timedelta(1)], False),
     ("🗓️ Later this week", [i for i in items if today + timedelta(1) < i[0].date() <= today + timedelta(7)], True),
 ]
-out = [f"☀️ Good morning, Rishi — {now:%a %d %b}", f"Bengaluru: {weather}"]
+out = [f"{greet}, Rishi — {now:%a %d %b}", f"Bengaluru: {weather}"]
 for title, group, show_day in sections:
     if group:
         out += ["", title] + [f"• {t} — {d:%a %d %b, %H:%M}" if show_day else f"• {t} — {d:%H:%M} ({typ})" for d, t, typ in group]
-if not items or not any(g for _, g, _ in sections):
+if heavy:
+    out += ["", "⚠️ Heavy days"]
+    for day in heavy:
+        names = ", ".join(t for d, t, _ in week if d.date() == day)
+        out.append(f"• {day:%a %d %b} — {load[day]} deadlines{' incl. an exam' if exams[day] else ''}: {names}")
+if not week:
     out += ["", "✅ Nothing due in the next 7 days."]
 print("\n".join(out))
