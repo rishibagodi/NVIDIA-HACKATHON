@@ -134,3 +134,22 @@ LLM-driven scheduling produced silent delivery failures, duplicates, and disable
 
 ### Ecosystem note
 - College Google Workspace accounts often disable 2-Step Verification, so App Passwords are unavailable; a keyword filter forwarding notices to a dedicated personal inbox worked well and limits what the agent can see.
+
+---
+
+## 2026-10-25 (afternoon) — new features + Token Factory switch
+
+### Token Factory
+- Switched the sandbox to Token Factory (`inference set` → compatible endpoint, `nvidia/Nemotron-3.5-Super-VL`) with no rebuild. Chat, vision, PDFs, Gmail extraction and planning all worked; replies were noticeably faster and more reliable than the free endpoint (which returned intermittent HTTP 500s and timeouts on Oct 18, 23 and 25).
+- Per-job `--model inference/nvidia/Nemotron-3_5-Lightning` routing works on Token Factory: a reminder run used **2,605 tokens**; the daily brief ~20.7k (vs ~35k on Super).
+- About one hour of heavy testing cost **$0.18** of trial credit.
+- Model IDs use inconsistent naming across Token Factory and build.nvidia.com (`Nemotron-3_5-Lightning` vs `nemotron-3.5-lightning-30b-a3b`), so job configs must change on switch.
+
+### NemoClaw / OpenClaw
+- `inference set` to a custom endpoint creates a **new model entry with no `maxTokens`/`contextWindow`** (falls back to 4096 output tokens) and suggests `rebuild` to re-probe — rebuilding is what broke the sandbox on Oct 18; setting the values with `openclaw config set` was safer.
+- **Self-triggering loop:** cron agent jobs default to `toolsAllow: ["*"]` with skills loaded. A delivery-only reminder ("⏰ Reminder: stretch") run by the small model applied our snooze skill to its own message and re-scheduled itself every minute; `STOP` in chat did not stop it (the loop lived in cron runs). Fixed with `--tools read` on all reminder jobs. Suggest a least-privilege default for announce-only jobs.
+- OpenClaw appends "Note: I did not schedule a reminder in this turn, so this will not trigger automatically" when a reply says "I'll remind you" but scheduling happened via a script/CLI — a false positive; rewording to "Reminder set for …" avoids it.
+- Token Factory Lightning echoed injected context ("Current time … (UTC)") in delivery-only runs until told "no time, no UTC, no extra lines".
+
+### Voice
+- Whisper language detection on short, Indian-accented clips was unusable (0.39–0.53 confidence for both English and Hindi), and an English vocabulary hint biased Hindi detection. A user-controlled voice-language setting (English default with base.en; Hindi with small + Hindi weekday hint) works reliably; Nemotron understood Hindi transcripts and even replied in Hindi.

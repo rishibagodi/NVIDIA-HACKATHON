@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Vigil: sync reminder automations with deadlines.md.
 Sorts deadlines.md, then makes the scheduler match it: creates missing reminders, repairs wrong/disabled ones,
-removes stale and duplicate ones, and verifies. Reminders run on a small model with thinking off."""
+removes stale and duplicate ones, and verifies. Reminder runs use a small model, thinking off, and READ-ONLY tools
+(least privilege: a delivery-only run must never be able to run scripts or schedule jobs)."""
 import argparse, json, re, subprocess
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -9,12 +10,13 @@ from datetime import datetime, timedelta, timezone
 IST = timezone(timedelta(hours=5, minutes=30))
 LINE = re.compile(r"^- \[([ x!])\] (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) IST \| (.+?) \| (.+?) \| (.*?) \| src: (.*?) \| id: ([a-z0-9-]+)\s*$")
 OFFSETS = {"24h": (timedelta(hours=24), "⏰ Tomorrow"), "2h": (timedelta(hours=2), "🚨 Due in 2 hours")}
+PREFIX = "Output exactly this single line and nothing else (no time, no UTC, no extra lines): "
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--to", required=True, help="Telegram chat id to deliver reminders to")
 ap.add_argument("--file", default="/sandbox/.openclaw/workspace/deadlines.md")
 ap.add_argument("--dry-run", action="store_true")
-ap.add_argument("--model", default="inference/nvidia/nemotron-3.5-lightning-30b-a3b", help="small model for reminder jobs")
+ap.add_argument("--model", default="inference/nvidia/Nemotron-3_5-Lightning", help="small model for reminder jobs")
 args = ap.parse_args()
 
 def cron(*a):
@@ -87,21 +89,20 @@ for name, jobs in existing.items():
 for name, (at, text) in want.items():
     job = (existing.get(name) or [None])[0]
     if job:
-        d = job.get("delivery") or {}
+        d, p = job.get("delivery") or {}, job.get("payload") or {}
         cur = datetime.fromisoformat(str((job.get("schedule") or {}).get("at", "1970-01-01T00:00:00+00:00")).replace("Z", "+00:00"))
         if (d.get("channel") == "telegram" and chat_id(job) == args.to and job.get("enabled", True)
-                and abs((cur - at).total_seconds()) < 90 and (job.get("payload") or {}).get("model") == args.model
-                and (job.get("payload") or {}).get("message") == f"Reply with exactly this text and nothing else: {text}"):
+                and abs((cur - at).total_seconds()) < 90 and p.get("model") == args.model
+                and p.get("toolsAllow") == ["read"] and p.get("message") == PREFIX + text):
             report["ok"].append(name); continue
         try:
             act("rm", job["id"])
         except Exception as e:
             report["failed"].append(f"{name}: rm {e}"); continue
     try:
-        act("add", "--name", name, "--at", at.isoformat(), "--agent", "main",
-            "--message", f"Reply with exactly this text and nothing else: {text}",
+        act("add", "--name", name, "--at", at.isoformat(), "--agent", "main", "--message", PREFIX + text,
             "--model", args.model, "--announce", "--channel", "telegram", "--to", args.to,
-            "--session", "isolated", "--thinking", "off", "--light-context", "--delete-after-run")
+            "--session", "isolated", "--tools", "read", "--thinking", "off", "--light-context", "--delete-after-run")
         report["repaired" if job else "created"].append(f"{name} @ {at:%a %d %b %H:%M} IST")
     except Exception as e:
         report["failed"].append(f"{name}: add {e}")

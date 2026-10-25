@@ -1,23 +1,27 @@
 #!/usr/bin/env bash
-# Run INSIDE the Vigil sandbox after uploading skills/ and tools/ into /sandbox/.openclaw/workspace/
-# and the Whisper model into /sandbox/.openclaw/vigil/models/whisper-base.en (see README).
+# Run INSIDE the Vigil sandbox after:
+#  - onboarding on Nebius Token Factory (main model nvidia/Nemotron-3.5-Super-VL),
+#  - uploading skills/ and tools/ into /sandbox/.openclaw/workspace/,
+#  - uploading Whisper models into /sandbox/.openclaw/vigil/models/ (whisper-base.en, whisper-small).
 # Usage: bash setup_jobs.sh <TELEGRAM_ID> [SMALL_MODEL]
 set -euo pipefail
 TO="$1"
-SMALL="${2:-inference/nvidia/nemotron-3.5-lightning-30b-a3b}"
+SMALL="${2:-inference/nvidia/Nemotron-3_5-Lightning}"
 W=/sandbox/.openclaw/workspace
 
 # 0. Put your Telegram ID into the skills
 sed -i "s/<YOUR_TELEGRAM_ID>/$TO/g" "$W"/skills/*/SKILL.md
 
-# 1. Raise max output tokens (OpenClaw default 4096 truncates Nemotron reasoning)
+# 1. Model limits (a custom-endpoint model entry starts with none; OpenClaw's default 4096 truncates Nemotron)
 openclaw config set "models.providers.inference.models[0].maxTokens" 16384 --strict-json
+openclaw config set "models.providers.inference.models[0].contextWindow" 131072 --strict-json
 
 # 2. Disable the 30-min heartbeat (saves ~1.2M tokens/day)
 openclaw system heartbeat disable
 
-# 3. Local voice-note transcription (faster-whisper on CPU; audio never leaves the sandbox)
+# 3. Local voice-note transcription (faster-whisper on CPU; audio never leaves the sandbox; default English)
 /usr/bin/python3 -m pip install --user --break-system-packages faster-whisper
+echo en > /sandbox/.openclaw/vigil/voice_lang
 openclaw config set tools.media.models "[{\"type\":\"cli\",\"command\":\"/usr/bin/python3\",\"args\":[\"$W/tools/transcribe.py\",\"{{AttachmentPath}}\"],\"timeoutSeconds\":90,\"capabilities\":[\"audio\"]}]" --strict-json
 openclaw config set tools.media.audio '{"enabled":true,"echoTranscript":true,"echoFormat":"📝 \"{transcript}\""}' --strict-json
 
