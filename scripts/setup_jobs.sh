@@ -16,8 +16,11 @@ sed -i "s/<YOUR_TELEGRAM_ID>/$TO/g" "$W"/skills/*/SKILL.md
 openclaw config set "models.providers.inference.models[0].maxTokens" 16384 --strict-json
 openclaw config set "models.providers.inference.models[0].contextWindow" 131072 --strict-json
 
-# 2. Disable the 30-min heartbeat (saves ~1.2M tokens/day)
+# 2. Disable the 30-min heartbeat permanently (saves ~1.2M tokens/day).
+#    The runtime switch alone does NOT survive gateway restarts, so also set it in config:
+#    every 0m = off; target none + directPolicy block = never messages; small model = cheap if it ever runs.
 openclaw system heartbeat disable
+openclaw config set agents.defaults.heartbeat '{"every":"0m","target":"none","directPolicy":"block","model":"'"$SMALL"'","lightContext":true}' --strict-json
 
 # 3. Local voice-note transcription (faster-whisper on CPU; audio never leaves the sandbox; default English)
 /usr/bin/python3 -m pip install --user --break-system-packages faster-whisper
